@@ -1,4 +1,4 @@
-import sqlite3 from 'sqlite3';
+import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -11,64 +11,48 @@ class Database {
   }
 
   initialize() {
-    const db = new sqlite3.Database(this.dbPath);
+    const db = new Database(this.dbPath);
     
-    db.serialize(() => {
-      // Users table
-      db.run(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY,
-          email TEXT UNIQUE,
-          name TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `, (err) => {
-        if (err) console.log('Users table exists');
-      });
+    // Users table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        email TEXT UNIQUE,
+        name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-      // Documents table
-      db.run(`
-        CREATE TABLE IF NOT EXISTS documents (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT NOT NULL,
-          content TEXT DEFAULT '',
-          ownerId INTEGER NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(ownerId) REFERENCES users(id)
-        )
-      `, (err) => {
-        if (err) console.log('Documents table exists');
-      });
+    // Documents table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT DEFAULT '',
+        ownerId INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(ownerId) REFERENCES users(id)
+      )
+    `);
 
-      // Sharing table
-      db.run(`
-        CREATE TABLE IF NOT EXISTS document_shares (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          documentId INTEGER NOT NULL,
-          userId INTEGER NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(documentId, userId),
-          FOREIGN KEY(documentId) REFERENCES documents(id),
-          FOREIGN KEY(userId) REFERENCES users(id)
-        )
-      `, (err) => {
-        if (err) console.log('Shares table exists');
-      });
+    // Sharing table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS document_shares (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        documentId INTEGER NOT NULL,
+        userId INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(documentId, userId),
+        FOREIGN KEY(documentId) REFERENCES documents(id),
+        FOREIGN KEY(userId) REFERENCES users(id)
+      )
+    `);
 
-      // Seed default users
-      db.run(
-        `INSERT OR IGNORE INTO users (id, email, name) VALUES (?, ?, ?)`,
-        [1, 'alice@example.com', 'Alice'],
-        (err) => { if (err) console.log('Alice exists'); }
-      );
-
-      db.run(
-        `INSERT OR IGNORE INTO users (id, email, name) VALUES (?, ?, ?)`,
-        [2, 'bob@example.com', 'Bob'],
-        (err) => { if (err) console.log('Bob exists'); }
-      );
-    });
+    // Seed default users
+    const insertUser = db.prepare(`INSERT OR IGNORE INTO users (id, email, name) VALUES (?, ?, ?)`);
+    insertUser.run(1, 'alice@example.com', 'Alice');
+    insertUser.run(2, 'bob@example.com', 'Bob');
 
     db.close();
   }
