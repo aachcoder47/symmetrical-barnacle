@@ -245,3 +245,4 @@ For issues or questions, check:
 - Browser DevTools console
 - Database file permissions
 "# New-folder" 
+"# New-folder" 
